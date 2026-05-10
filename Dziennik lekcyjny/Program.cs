@@ -1,20 +1,29 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
-using System.Runtime.Remoting.Messaging;
 using System.Text;
 
 namespace DziennikLekcyjny
 {
     internal class Program
     {
+        static string folderDanych = Path.Combine(
+     Directory.GetParent(AppDomain.CurrentDomain.BaseDirectory).Parent.Parent.FullName,
+     "Dane");
+
+        static string plikStudenci = Path.Combine(folderDanych, "studenci.csv");
+        static string plikPrzedmioty = Path.Combine(folderDanych, "przedmioty.csv");
+        static string plikOceny = Path.Combine(folderDanych, "oceny.csv");
+
         static void Main(string[] args)
         {
             Console.OutputEncoding = Encoding.UTF8;
 
             DaneSzkoly dane = new DaneSzkoly();
-            DodajDaneStartowe(dane);
+            
+            WczytajDaneZPlikow(dane);
             Menu(dane);
         }
 
@@ -24,7 +33,7 @@ namespace DziennikLekcyjny
 
             while (!wyjscie)
             {
-                
+
                 Console.WriteLine("==================================");
                 Console.WriteLine("     DZIENNIK LEKCYJNY - MENU    ");
                 Console.WriteLine("==================================");
@@ -94,6 +103,7 @@ namespace DziennikLekcyjny
 
             Student student = new Student(noweId, imie, nazwisko);
             dane.Studenci.Add(student);
+            ZapiszDaneDoPlikow(dane);
 
             Console.WriteLine("Dodano studenta:");
             Console.WriteLine(student);
@@ -131,6 +141,7 @@ namespace DziennikLekcyjny
 
             Przedmiot przedmiot = new Przedmiot(noweId, nazwa);
             dane.Przedmioty.Add(przedmiot);
+            ZapiszDaneDoPlikow(dane);
 
             Console.WriteLine("Dodano przedmiot:");
             Console.WriteLine(przedmiot);
@@ -176,6 +187,7 @@ namespace DziennikLekcyjny
 
             Ocena ocena = new Ocena(idStudenta, idPrzedmiotu, wartoscOceny);
             dane.Oceny.Add(ocena);
+            ZapiszDaneDoPlikow(dane);
 
             Console.WriteLine("Ocena została dodana.");
         }
@@ -236,32 +248,87 @@ namespace DziennikLekcyjny
         {
             Console.Write(komunikat);
 
-            
+
             string wpis = Console.ReadLine().Replace(',', '.');
 
             // InvariantCulture pozwala poprawnie odczytać liczbę z kropką
             return double.Parse(wpis, CultureInfo.InvariantCulture);
         }
 
-        
+
         // dane poczatkowe
-      
 
-        static void DodajDaneStartowe(DaneSzkoly dane)
+
+        static void ZapiszDaneDoPlikow(DaneSzkoly dane)
         {
-            dane.Studenci.Add(new Student(1, "Jan", "Kowalski"));
-            dane.Studenci.Add(new Student(2, "Anna", "Nowak"));
-            dane.Studenci.Add(new Student(3, "Piotr", "Wiśniewski"));
+            Directory.CreateDirectory(folderDanych);
 
-            dane.Przedmioty.Add(new Przedmiot(1, "Matematyka"));
-            dane.Przedmioty.Add(new Przedmiot(2, "Programowanie"));
-            dane.Przedmioty.Add(new Przedmiot(3, "Bazy Danych"));
+            File.WriteAllLines(plikStudenci,
+                dane.Studenci.Select(s => $"{s.Id};{s.Imie};{s.Nazwisko}"));
 
-            dane.Oceny.Add(new Ocena(1, 1, 4.0));
-            dane.Oceny.Add(new Ocena(1, 2, 5.0));
-            dane.Oceny.Add(new Ocena(2, 1, 3.5));
-            dane.Oceny.Add(new Ocena(2, 3, 4.5));
-            dane.Oceny.Add(new Ocena(3, 2, 3.0));
+            File.WriteAllLines(plikPrzedmioty,
+                dane.Przedmioty.Select(p => $"{p.Id};{p.Nazwa}"));
+
+            File.WriteAllLines(plikOceny,
+                dane.Oceny.Select(o => $"{o.IdStudenta};{o.IdPrzedmiotu};{o.Wartosc.ToString(CultureInfo.InvariantCulture)}"));
+        }
+
+        static void WczytajDaneZPlikow(DaneSzkoly dane)
+        {
+            Directory.CreateDirectory(folderDanych);
+
+            if (File.Exists(plikStudenci))
+            {
+                foreach (string linia in File.ReadAllLines(plikStudenci))
+                {
+                    if (string.IsNullOrWhiteSpace(linia)) continue;
+
+                    string[] czesci = linia.Split(';');
+
+                    if (czesci.Length == 3)
+                    {
+                        dane.Studenci.Add(new Student(
+                            int.Parse(czesci[0]),
+                            czesci[1],
+                            czesci[2]));
+                    }
+                }
+            }
+
+            if (File.Exists(plikPrzedmioty))
+            {
+                foreach (string linia in File.ReadAllLines(plikPrzedmioty))
+                {
+                    if (string.IsNullOrWhiteSpace(linia)) continue;
+
+                    string[] czesci = linia.Split(';');
+
+                    if (czesci.Length == 2)
+                    {
+                        dane.Przedmioty.Add(new Przedmiot(
+                            int.Parse(czesci[0]),
+                            czesci[1]));
+                    }
+                }
+            }
+
+            if (File.Exists(plikOceny))
+            {
+                foreach (string linia in File.ReadAllLines(plikOceny))
+                {
+                    if (string.IsNullOrWhiteSpace(linia)) continue;
+
+                    string[] czesci = linia.Split(';');
+
+                    if (czesci.Length == 3)
+                    {
+                        dane.Oceny.Add(new Ocena(
+                            int.Parse(czesci[0]),
+                            int.Parse(czesci[1]),
+                            double.Parse(czesci[2], CultureInfo.InvariantCulture)));
+                    }
+                }
+            }
         }
     }
 
