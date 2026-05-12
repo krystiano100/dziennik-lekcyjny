@@ -180,8 +180,22 @@ namespace DziennikLekcyjny
             WyswietlStudentow(dane);
             int idStudenta = WczytajLiczbeCalkowita("Podaj ID studenta: ");
 
+            // SPRAWDZENIE: Czy student istnieje?
+            if (PobierzStudentaPoId(dane, idStudenta) == null)
+            {
+                Console.WriteLine("Błąd! Uczeń o podanym ID nie istnieje. Anulowano dodawanie oceny.");
+                return; // Przerywamy działanie metody i wracamy do menu
+            }
+
             WyswietlPrzedmioty(dane);
             int idPrzedmiotu = WczytajLiczbeCalkowita("Podaj ID przedmiotu: ");
+
+            // SPRAWDZENIE: Czy przedmiot istnieje?
+            if (PobierzPrzedmiotPoId(dane, idPrzedmiotu) == null)
+            {
+                Console.WriteLine("Błąd! Przedmiot o podanym ID nie istnieje. Anulowano dodawanie oceny.");
+                return;
+            }
 
             double wartoscOceny = WczytajOcene("Podaj ocenę: ");
 
@@ -234,25 +248,51 @@ namespace DziennikLekcyjny
 
         static int WczytajLiczbeCalkowita(string komunikat)
         {
+            int wynik;
             Console.Write(komunikat);
-            return int.Parse(Console.ReadLine());
+
+            // TryParse próbuje zamienić tekst na liczbę. Jeśli się nie uda, zwraca false i pętla trwa.
+            while (!int.TryParse(Console.ReadLine(), out wynik))
+            {
+                Console.WriteLine("Błąd! Musisz podać poprawną liczbę całkowitą.");
+                Console.Write(komunikat);
+            }
+
+            return wynik;
         }
 
         static string WczytajNapis(string komunikat)
         {
             Console.Write(komunikat);
-            return Console.ReadLine();
+            string wpis = Console.ReadLine();
+
+            // Dopóki wpisany tekst jest pusty lub składa się z samych spacji, pytamy ponownie
+            while (string.IsNullOrWhiteSpace(wpis))
+            {
+                Console.WriteLine("Błąd! Wartość nie może być pusta.");
+                Console.Write(komunikat);
+                wpis = Console.ReadLine();
+            }
+
+            return wpis;
         }
 
         static double WczytajOcene(string komunikat)
         {
+            double wynik;
             Console.Write(komunikat);
-
-
             string wpis = Console.ReadLine().Replace(',', '.');
 
-            // InvariantCulture pozwala poprawnie odczytać liczbę z kropką
-            return double.Parse(wpis, CultureInfo.InvariantCulture);
+            // Sprawdzamy dwie rzeczy naraz: czy to w ogóle jest liczba (TryParse) 
+            // oraz czy mieści się w przedziale od 1 do 6.
+            while (!double.TryParse(wpis, NumberStyles.Any, CultureInfo.InvariantCulture, out wynik) || wynik < 1 || wynik > 6)
+            {
+                Console.WriteLine("Błąd! Podaj poprawną ocenę z przedziału od 1 do 6 (np. 4.5).");
+                Console.Write(komunikat);
+                wpis = Console.ReadLine().Replace(',', '.');
+            }
+
+            return wynik;
         }
 
 
