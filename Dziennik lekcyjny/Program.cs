@@ -16,13 +16,14 @@ namespace DziennikLekcyjny
         static string plikStudenci = Path.Combine(folderDanych, "studenci.csv");
         static string plikPrzedmioty = Path.Combine(folderDanych, "przedmioty.csv");
         static string plikOceny = Path.Combine(folderDanych, "oceny.csv");
+        static string plikDziennik = Path.Combine(folderDanych, "dziennik.csv");
 
         static void Main(string[] args)
         {
             Console.OutputEncoding = Encoding.UTF8;
 
             DaneSzkoly dane = new DaneSzkoly();
-            
+
             WczytajDaneZPlikow(dane);
             Menu(dane);
         }
@@ -43,6 +44,7 @@ namespace DziennikLekcyjny
                 Console.WriteLine("4. Wyświetl przedmioty");
                 Console.WriteLine("5. Dodaj ocenę");
                 Console.WriteLine("6. Pokaż oceny studenta");
+                Console.WriteLine("7. Eksportuj dziennik do CSV");
                 Console.WriteLine("0. Wyjście");
                 Console.WriteLine("==================================");
 
@@ -68,6 +70,9 @@ namespace DziennikLekcyjny
                         break;
                     case 6:
                         PokazOcenyStudenta(dane);
+                        break;
+                    case 7:
+                        EksportujDziennik(dane);
                         break;
                     case 0:
                         wyjscie = true;
@@ -301,131 +306,161 @@ namespace DziennikLekcyjny
 
         static void ZapiszDaneDoPlikow(DaneSzkoly dane)
         {
-            Directory.CreateDirectory(folderDanych);
+            try
+            {
+                Directory.CreateDirectory(folderDanych);
 
-            File.WriteAllLines(plikStudenci,
-                dane.Studenci.Select(s => $"{s.Id};{s.Imie};{s.Nazwisko}"));
+                File.WriteAllLines(plikStudenci,
+                    dane.Studenci.Select(s => $"{s.Id};{s.Imie};{s.Nazwisko}"));
 
-            File.WriteAllLines(plikPrzedmioty,
-                dane.Przedmioty.Select(p => $"{p.Id};{p.Nazwa}"));
+                File.WriteAllLines(plikPrzedmioty,
+                    dane.Przedmioty.Select(p => $"{p.Id};{p.Nazwa}"));
 
-            File.WriteAllLines(plikOceny,
-                dane.Oceny.Select(o => $"{o.IdStudenta};{o.IdPrzedmiotu};{o.Wartosc.ToString(CultureInfo.InvariantCulture)}"));
+                File.WriteAllLines(plikOceny,
+                    dane.Oceny.Select(o => $"{o.IdStudenta};{o.IdPrzedmiotu};{o.Wartosc.ToString(CultureInfo.InvariantCulture)}"));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"\nBŁĄD ZAPISU: Wystąpił problem podczas zapisywania danych do plików. Szczegóły: {ex.Message}");
+            }
         }
 
         static void WczytajDaneZPlikow(DaneSzkoly dane)
         {
-            Directory.CreateDirectory(folderDanych);
-
-            if (File.Exists(plikStudenci))
+            try
             {
-                foreach (string linia in File.ReadAllLines(plikStudenci))
+                Directory.CreateDirectory(folderDanych);
+
+                if (File.Exists(plikStudenci))
                 {
-                    if (string.IsNullOrWhiteSpace(linia)) continue;
-
-                    string[] czesci = linia.Split(';');
-
-                    if (czesci.Length == 3)
+                    foreach (string linia in File.ReadAllLines(plikStudenci))
                     {
-                        dane.Studenci.Add(new Student(
-                            int.Parse(czesci[0]),
-                            czesci[1],
-                            czesci[2]));
+                        if (string.IsNullOrWhiteSpace(linia)) continue;
+                        string[] czesci = linia.Split(';');
+                        if (czesci.Length == 3)
+                        {
+                            dane.Studenci.Add(new Student(int.Parse(czesci[0]), czesci[1], czesci[2]));
+                        }
+                    }
+                }
+
+                if (File.Exists(plikPrzedmioty))
+                {
+                    foreach (string linia in File.ReadAllLines(plikPrzedmioty))
+                    {
+                        if (string.IsNullOrWhiteSpace(linia)) continue;
+                        string[] czesci = linia.Split(';');
+                        if (czesci.Length == 2)
+                        {
+                            dane.Przedmioty.Add(new Przedmiot(int.Parse(czesci[0]), czesci[1]));
+                        }
+                    }
+                }
+
+                if (File.Exists(plikOceny))
+                {
+                    foreach (string linia in File.ReadAllLines(plikOceny))
+                    {
+                        if (string.IsNullOrWhiteSpace(linia)) continue;
+                        string[] czesci = linia.Split(';');
+                        if (czesci.Length == 3)
+                        {
+                            dane.Oceny.Add(new Ocena(int.Parse(czesci[0]), int.Parse(czesci[1]), double.Parse(czesci[2], CultureInfo.InvariantCulture)));
+                        }
                     }
                 }
             }
-
-            if (File.Exists(plikPrzedmioty))
+            catch (Exception ex)
             {
-                foreach (string linia in File.ReadAllLines(plikPrzedmioty))
-                {
-                    if (string.IsNullOrWhiteSpace(linia)) continue;
-
-                    string[] czesci = linia.Split(';');
-
-                    if (czesci.Length == 2)
-                    {
-                        dane.Przedmioty.Add(new Przedmiot(
-                            int.Parse(czesci[0]),
-                            czesci[1]));
-                    }
-                }
-            }
-
-            if (File.Exists(plikOceny))
-            {
-                foreach (string linia in File.ReadAllLines(plikOceny))
-                {
-                    if (string.IsNullOrWhiteSpace(linia)) continue;
-
-                    string[] czesci = linia.Split(';');
-
-                    if (czesci.Length == 3)
-                    {
-                        dane.Oceny.Add(new Ocena(
-                            int.Parse(czesci[0]),
-                            int.Parse(czesci[1]),
-                            double.Parse(czesci[2], CultureInfo.InvariantCulture)));
-                    }
-                }
+                Console.WriteLine($"\nBŁĄD ODCZYTU: Wystąpił problem podczas wczytywania plików. Szczegóły: {ex.Message}");
             }
         }
-    }
-
-    internal class Student
-    {
-        public int Id { get; set; }
-        public string Imie { get; set; }
-        public string Nazwisko { get; set; }
-
-        public Student(int id, string imie, string nazwisko)
+        static void EksportujDziennik(DaneSzkoly dane)
         {
-            Id = id;
-            Imie = imie;
-            Nazwisko = nazwisko;
+            Console.WriteLine("=== EKSPORT DZIENNIKA DO CSV ===");
+            try
+            {
+                Directory.CreateDirectory(folderDanych);
+                List<string> linieEksportu = new List<string>();
+
+                foreach (Ocena ocena in dane.Oceny)
+                {
+                    Student student = PobierzStudentaPoId(dane, ocena.IdStudenta);
+                    Przedmiot przedmiot = PobierzPrzedmiotPoId(dane, ocena.IdPrzedmiotu);
+
+                    if (student != null && przedmiot != null)
+                    {
+                        // Tworzymy linię w formacie: Uczen;Przedmiot;Ocena np. Jan Kowalski;Matematyka;4.0
+                        string formatOceny = ocena.Wartosc.ToString("F1", CultureInfo.InvariantCulture);
+                        string linia = $"{student.Imie} {student.Nazwisko};{przedmiot.Nazwa};{formatOceny}";
+                        linieEksportu.Add(linia);
+                    }
+                }
+
+                File.WriteAllLines(plikDziennik, linieEksportu, Encoding.UTF8);
+                Console.WriteLine($"Pomyślnie wyeksportowano dziennik. Plik znajduje się w: {plikDziennik}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"\nBŁĄD EKSPORTU: Nie udało się wyeksportować dziennika. Szczegóły: {ex.Message}");
+            }
         }
 
-        public override string ToString()
+        internal class Student
         {
-            return $"{Id} - {Imie} {Nazwisko}";
+            public int Id { get; set; }
+            public string Imie { get; set; }
+            public string Nazwisko { get; set; }
+
+            public Student(int id, string imie, string nazwisko)
+            {
+                Id = id;
+                Imie = imie;
+                Nazwisko = nazwisko;
+            }
+
+            public override string ToString()
+            {
+                return $"{Id} - {Imie} {Nazwisko}";
+            }
         }
-    }
 
-    internal class Przedmiot
-    {
-        public int Id { get; set; }
-        public string Nazwa { get; set; }
-
-        public Przedmiot(int id, string nazwa)
+        internal class Przedmiot
         {
-            Id = id;
-            Nazwa = nazwa;
+            public int Id { get; set; }
+            public string Nazwa { get; set; }
+
+            public Przedmiot(int id, string nazwa)
+            {
+                Id = id;
+                Nazwa = nazwa;
+            }
+
+            public override string ToString()
+            {
+                return $"{Id} - {Nazwa}";
+            }
         }
 
-        public override string ToString()
+        internal class Ocena
         {
-            return $"{Id} - {Nazwa}";
+            public int IdStudenta { get; set; }
+            public int IdPrzedmiotu { get; set; }
+            public double Wartosc { get; set; }
+
+            public Ocena(int idStudenta, int idPrzedmiotu, double wartosc)
+            {
+                IdStudenta = idStudenta;
+                IdPrzedmiotu = idPrzedmiotu;
+                Wartosc = wartosc;
+            }
         }
-    }
 
-    internal class Ocena
-    {
-        public int IdStudenta { get; set; }
-        public int IdPrzedmiotu { get; set; }
-        public double Wartosc { get; set; }
-
-        public Ocena(int idStudenta, int idPrzedmiotu, double wartosc)
+        internal class DaneSzkoly
         {
-            IdStudenta = idStudenta;
-            IdPrzedmiotu = idPrzedmiotu;
-            Wartosc = wartosc;
+            public List<Student> Studenci { get; set; } = new List<Student>();
+            public List<Przedmiot> Przedmioty { get; set; } = new List<Przedmiot>();
+            public List<Ocena> Oceny { get; set; } = new List<Ocena>();
         }
-    }
-
-    internal class DaneSzkoly
-    {
-        public List<Student> Studenci { get; set; } = new List<Student>();
-        public List<Przedmiot> Przedmioty { get; set; } = new List<Przedmiot>();
-        public List<Ocena> Oceny { get; set; } = new List<Ocena>();
     }
 }
